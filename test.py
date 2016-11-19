@@ -125,9 +125,9 @@ def my_download_node(node, session, name, instagram, download_videos=True, geota
         if sleep:
             time.sleep(1.75 * random.random() + 0.25)
         if "caption" in node:
-            instaloader.save_caption(name, node["date"], node["caption"], shorter_output, quiet)
+            instaloader.save_caption(name, node["date"], node["caption"], shorter_output, quiet=True)
         else:
-            instaloader._log("<no caption>", end=' ', flush=True, quiet=quiet)
+            instaloader._log("<no caption>", end='', flush=False, quiet=True)
         if node["is_video"] and download_videos:
             video_data = instaloader.get_json('p/' + node["code"], session, sleep=sleep)
             video = instaloader.download_pic(name,
@@ -141,11 +141,10 @@ def my_download_node(node, session, name, instagram, download_videos=True, geota
             location = instaloader.get_location(node, session, sleep)
             if location:
                 instaloader.save_location(name, location, node["date"])
-        instaloader._log(quiet=quiet)
     except PicAlreadyDownloadedException:
         return False
     except instaloader.InstaloaderException as ex:
-        print('\n' + ex)
+        instaloader._log(ex, flush=True, quiet=quiet)
         return False
 
     return True
@@ -160,11 +159,11 @@ def my_download_pic(name, url, date_epoch, outputlabel=None, quiet=False):
     file_extension = url[-3:] if urlmatch is None else urlmatch.group(0)[1:-1]
     filename = name.lower() + '/' + instaloader._epoch_to_string(date_epoch) + '.' + file_extension
     if os.path.isfile(filename):
-        instaloader._log(outputlabel + ' exists.\n', end='', flush=True, quiet=quiet)
+        instaloader._log(outputlabel + ' exists.', flush=True, quiet=quiet)
         raise PicAlreadyDownloadedException("File \'" + filename + "\' already exists.")
     resp = instaloader.get_anonymous_session().get(url, stream=True)
     if resp.status_code == 200:
-        instaloader._log(outputlabel, end=' ', flush=True, quiet=quiet)
+        instaloader._log(outputlabel + ' uploaded.', flush=True, quiet=quiet)
         os.makedirs(name.lower(), exist_ok=True)
         with open(filename, 'wb') as file:
             resp.raw.decode_content = True
