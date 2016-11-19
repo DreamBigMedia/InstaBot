@@ -6,7 +6,12 @@ import instaloader
 from instagram_api.InstagramAPI import InstagramAPI
 
 
-def my_download(name, session, instagram, profile_pic_only=False, download_videos=True, geotags=False,
+def get_random_caption(userList, config):
+    caption = random.choice(config['captions']).replace('@XXX', '@'+userList[-1])
+    return caption
+
+
+def my_download(name, session, config, instagram, profile_pic_only=False, download_videos=True, geotags=False,
         fast_update=False, shorter_output=False, sleep=True, quiet=False, filter_func=None, sleep_min=10, my_profile=None):
     """Download one profile"""
     # pylint:disable=too-many-branches,too-many-locals
@@ -57,7 +62,7 @@ def my_download(name, session, instagram, profile_pic_only=False, download_video
                 continue
 
             path = name if my_profile == None else my_profile + '/' + name
-            downloaded = instaloader.download_node(node, session, path, instagram,
+            downloaded = instaloader.download_node(node, session, path, config, instagram,
                                        download_videos=download_videos, geotags=geotags,
                                        sleep=sleep, shorter_output=shorter_output, quiet=quiet)
             if fast_update and not downloaded:
@@ -104,7 +109,7 @@ def my_check_id(profile, session, json_data, quiet=False, my_profile=''):
     raise instaloader.ProfileNotExistsException("Profile {0} does not exist.".format(profile))
 
 
-def my_download_node(node, session, name, instagram, download_videos=True, geotags=False, sleep=True, shorter_output=False, quiet=False):
+def my_download_node(node, session, name, config, instagram, download_videos=True, geotags=False, sleep=True, shorter_output=False, quiet=False):
     """
     Download everything associated with one instagram node, i.e. picture, caption and video.
 
@@ -121,18 +126,21 @@ def my_download_node(node, session, name, instagram, download_videos=True, geota
         filename = instaloader.download_pic(name, node["display_src"], node["date"], quiet=quiet)
         if sleep:
             time.sleep(1.75 * random.random() + 0.25)
-        if "caption" in node:
-            instaloader.save_caption(name, node["date"], node["caption"], shorter_output, quiet=True)
-        else:
-            instaloader._log("<no caption>", end='', flush=False, quiet=True)
+
+        caption = node["caption"] if "caption" in node else ""
+        if len(INSTAUSER_REGEX.findall(caption)) == 0:
+            caption = caption + get_random_caption(name.split('/'), config)
+
+        instaloader.save_caption(name, node["date"], caption, shorter_output, quiet=True)
+
         if node["is_video"] and download_videos:
             video_data = instaloader.get_json('p/' + node["code"], session, sleep=sleep)
             video = instaloader.download_pic(name,
                          video_data['entry_data']['PostPage'][0]['media']['video_url'],
                          node["date"], 'mp4', quiet=quiet)
-            instagram.uploadVideo(video=video, thumbnail=filename, caption=node["caption"])
+            instagram.uploadVideo(video=video, thumbnail=filename, caption=caption)
         else:
-            instagram.uploadPhoto(photo=filename, caption=node["caption"])
+            instagram.uploadPhoto(photo=filename, caption=caption)
 
         if geotags:
             location = instaloader.get_location(node, session, sleep)
@@ -209,6 +217,7 @@ class MyInstagramAPI(InstagramAPI):
 class InstaThread (threading.Thread):
     def __init__(self, config, session):
         threading.Thread.__init__(self)
+        self.config = config
         self.username = config['username']
         self.password = config['password']
         self.proxies = config['proxies']
@@ -219,11 +228,9 @@ class InstaThread (threading.Thread):
         self.instagram.login(proxies=self.proxies)
 
     def run(self):
-        print("Starting " + self.username)
         for channel in self.channels:
-            instaloader.download(name=channel['name'], instagram=self.instagram, my_profile=self.username, sleep_min=self.sleep_min, session=self.session, fast_update=False, filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
+            instaloader.download(name=channel['name'], config=self.config, instagram=self.instagram, my_profile=self.username, sleep_min=self.sleep_min, session=self.session, fast_update=False, filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
         self.instagram.logout()
-        print("Stopping " + self.username)
 
 
 instaloader.download = my_download
@@ -231,6 +238,8 @@ instaloader.check_id = my_check_id
 instaloader.download_node = my_download_node
 instaloader.download_pic = my_download_pic
 THREADS = []
+INSTAUSER_REGEX = re.compile(r"@[\w.]+")
+
 
 def main():
     with open('config.json', 'r') as f:
