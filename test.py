@@ -65,7 +65,7 @@ def my_download(name, session, instagram, profile_pic_only=False, download_video
             threadLock.release()
             if fast_update and not downloaded:
                 return
-            if sleep:
+            if sleep and downloaded:
                 time.sleep(sleep_min * 60)
         data = instaloader.get_json(name, session, max_id=get_last_id(data), sleep=sleep)
 
