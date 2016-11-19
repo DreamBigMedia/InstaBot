@@ -7,6 +7,7 @@ instaloader==1.2
 moviepy==0.2.2.11
 numpy==1.11.2
 python-instagram==1.3.2
+pytz==2016.7
 requests==2.11.1
 requests-toolbelt==0.7.0
 simplejson==3.10.0

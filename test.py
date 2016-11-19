@@ -1,9 +1,15 @@
 #!/usr/bin/env python
-
-import time, random, re, os, shutil, datetime, threading, requests, json, signal
+import random, re, os, shutil, datetime, time, threading, requests, json, signal, pytz
 
 import instaloader
 from instagram_api.InstagramAPI import InstagramAPI
+
+
+def in_between(now, start, end):
+    if start <= end:
+        return start <= now < end
+    else:
+        return start <= now or now < end
 
 
 def get_random_caption(userList, config):
@@ -63,7 +69,8 @@ def my_download(name, session, config, instagram, profile_pic_only=False, downlo
     while get_last_id(data) is not None:
         for node in data["entry_data"]["ProfilePage"][0]["user"]["media"]["nodes"]:
             count += 1
-            instaloader._log("%s %25s :: %-25s [%4i/%4i] " % (datetime.datetime.now(), instagram.username, name, count, totalcount), end="", flush=False, quiet=quiet)
+            instaloader._log("%s %25s :: %-25s [%4i/%4i] " % (datetime.datetime.now(), instagram.username, name, count,
+                                                              totalcount), end="", flush=False, quiet=quiet)
             if filter_func is not None and filter_func(node):
                 instaloader._log('Has not enough likes.', flush=True, quiet=quiet)
                 continue
@@ -115,7 +122,8 @@ def my_check_id(profile, session, json_data, quiet=False, my_profile=''):
     raise instaloader.ProfileNotExistsException("Profile {0} does not exist.".format(profile))
 
 
-def my_download_node(node, session, name, config, instagram, download_videos=True, geotags=False, sleep=True, shorter_output=False, quiet=False):
+def my_download_node(node, session, name, config, instagram, download_videos=True, geotags=False, sleep=True,
+                     shorter_output=False, quiet=False):
     """
     Download everything associated with one instagram node, i.e. picture, caption and video.
 
@@ -229,15 +237,22 @@ class InstaThread (threading.Thread):
         self.proxies = config['proxies']
         self.channels = config['channels']
         self.sleep_min = config['sleep']
+        self.timezone = config['timezone']
+        self.start_hour = config['start_hour']
+        self.end_hour = config['end_hour']
         self.session = session
         self.instagram = MyInstagramAPI(self.username, self.password)
         self.instagram.login(proxies=self.proxies)
 
     def run(self):
         while True:
+            while not in_between(datetime.datetime.now(tz=pytz.timezone(self.timezone)).time(),
+                                 datetime.time(self.start_hour), datetime.time(self.end_hour)):
+                time.sleep(30)
             channel = random.choice(self.channels)
             instaloader.download(name=channel['name'], config=self.config, instagram=self.instagram, my_profile=self.username,
-                                 sleep_min=self.sleep_min, session=self.session, fast_update=False, filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
+                                 sleep_min=self.sleep_min, session=self.session, fast_update=False,
+                                 filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
             time.sleep(self.sleep_min * 60)
 
 
