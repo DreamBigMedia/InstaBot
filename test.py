@@ -11,6 +11,13 @@ def get_random_caption(userList, config):
     return caption
 
 
+def get_tags(config):
+    caption = "\n"
+    for tag in config['tags']:
+        caption = caption + tag + " "
+    return caption
+
+
 def my_download(name, session, config, instagram, profile_pic_only=False, download_videos=True, geotags=False,
         fast_update=False, shorter_output=False, sleep=True, quiet=False, filter_func=None, sleep_min=10, my_profile=None):
     """Download one profile"""
@@ -130,7 +137,7 @@ def my_download_node(node, session, name, config, instagram, download_videos=Tru
         caption = node["caption"] if "caption" in node else ""
         if len(INSTAUSER_REGEX.findall(caption)) == 0:
             caption = caption + get_random_caption(name.split('/'), config)
-
+        caption = caption + get_tags(config)
         instaloader.save_caption(name, node["date"], caption, shorter_output, quiet=True)
 
         if node["is_video"] and download_videos:
