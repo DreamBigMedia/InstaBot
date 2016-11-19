@@ -72,10 +72,9 @@ def my_download(name, session, config, instagram, profile_pic_only=False, downlo
             downloaded = instaloader.download_node(node, session, path, config, instagram,
                                        download_videos=download_videos, geotags=geotags,
                                        sleep=sleep, shorter_output=shorter_output, quiet=quiet)
-            if fast_update and not downloaded:
+            if downloaded:
                 return
-            if sleep and downloaded:
-                time.sleep(sleep_min * 60)
+
         data = instaloader.get_json(name, session, max_id=get_last_id(data), sleep=sleep)
 
 
@@ -235,15 +234,19 @@ class InstaThread (threading.Thread):
         self.instagram.login(proxies=self.proxies)
 
     def run(self):
-        for channel in self.channels:
-            instaloader.download(name=channel['name'], config=self.config, instagram=self.instagram, my_profile=self.username, sleep_min=self.sleep_min, session=self.session, fast_update=False, filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
-        self.instagram.logout()
+        while True:
+            channel = random.choice(self.channels)
+            instaloader.download(name=channel['name'], config=self.config, instagram=self.instagram, my_profile=self.username,
+                                 sleep_min=self.sleep_min, session=self.session, fast_update=False, filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
+            time.sleep(self.sleep_min * 60)
 
 
 instaloader.download = my_download
 instaloader.check_id = my_check_id
 instaloader.download_node = my_download_node
 instaloader.download_pic = my_download_pic
+
+
 THREADS = []
 INSTAUSER_REGEX = re.compile(r"@[\w.]+")
 
