@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import random, re, os, shutil, datetime, time, threading, requests, json, signal, pytz
+import sys, os.path, random, re, os, shutil, datetime, time, threading, requests, json, signal, pytz
 
 import instaloader
 from instagram_api.InstagramAPI import InstagramAPI
@@ -266,8 +266,14 @@ THREADS = []
 INSTAUSER_REGEX = re.compile(r"@[\w.]+")
 
 
-def main():
-    with open('config_sample.json', 'r') as f:
+def main(argv):
+    try:
+        config_file = argv[0]
+        if not os.path.exists(config_file):
+            raise Exception("File " + config_file + " doesn't exist.")
+    except:
+        config_file = 'config_sample.json'
+    with open(config_file, 'r') as f:
         config = json.load(f)
     session = instaloader.get_anonymous_session()
 
@@ -282,9 +288,9 @@ def main():
 def Exit_gracefully(signal, frame):
     for t in THREADS:
         t.join(0)
-    exit(0)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, Exit_gracefully)
-    main()
+    main(sys.argv[1:])
