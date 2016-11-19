@@ -247,7 +247,7 @@ def main():
 
 def Exit_gracefully(signal, frame):
     for t in THREADS:
-        t.join(5)
+        t.join(0)
     exit(0)
 
 
