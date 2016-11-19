@@ -267,7 +267,7 @@ INSTAUSER_REGEX = re.compile(r"@[\w.]+")
 
 
 def main():
-    with open('config.json', 'r') as f:
+    with open('config_sample.json', 'r') as f:
         config = json.load(f)
     session = instaloader.get_anonymous_session()
 

@@ -1,6 +1,6 @@
 [
   {
-    "active": true,
+    "active": false,
     "username": "username",
     "password": "password",
     "proxies": {},
