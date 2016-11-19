@@ -51,7 +51,7 @@ def my_download(name, session, instagram, profile_pic_only=False, download_video
     while get_last_id(data) is not None:
         for node in data["entry_data"]["ProfilePage"][0]["user"]["media"]["nodes"]:
             count += 1
-            instaloader._log("%25s :: %-25s [%4i/%4i] " % (instagram.username, name, count, totalcount), end="", flush=False, quiet=quiet)
+            instaloader._log("%s %25s :: %-25s [%4i/%4i] " % (datetime.datetime.now(), instagram.username, name, count, totalcount), end="", flush=False, quiet=quiet)
             if filter_func is not None and filter_func(node):
                 instaloader._log('Has not enough likes.', flush=True, quiet=quiet)
                 continue
