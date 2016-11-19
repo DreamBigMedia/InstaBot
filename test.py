@@ -51,18 +51,15 @@ def my_download(name, session, instagram, profile_pic_only=False, download_video
     while get_last_id(data) is not None:
         for node in data["entry_data"]["ProfilePage"][0]["user"]["media"]["nodes"]:
             count += 1
-            threadLock.acquire()
-            instaloader._log("%25s :: %-25s [%4i/%4i] " % (instagram.username, name, count, totalcount), end="", flush=True, quiet=quiet)
+            instaloader._log("%25s :: %-25s [%4i/%4i] " % (instagram.username, name, count, totalcount), end="", flush=False, quiet=quiet)
             if filter_func is not None and filter_func(node):
-                instaloader._log('Has not enough likes.\n', end='', flush=True, quiet=quiet)
-                threadLock.release()
+                instaloader._log('Has not enough likes.', flush=True, quiet=quiet)
                 continue
 
             path = name if my_profile == None else my_profile + '/' + name
             downloaded = instaloader.download_node(node, session, path, instagram,
                                        download_videos=download_videos, geotags=geotags,
                                        sleep=sleep, shorter_output=shorter_output, quiet=quiet)
-            threadLock.release()
             if fast_update and not downloaded:
                 return
             if sleep and downloaded:
@@ -233,8 +230,7 @@ instaloader.download = my_download
 instaloader.check_id = my_check_id
 instaloader.download_node = my_download_node
 instaloader.download_pic = my_download_pic
-threadLock = threading.Lock()
-threads = []
+THREADS = []
 
 def main():
     with open('config.json', 'r') as f:
@@ -246,12 +242,12 @@ def main():
             continue
         thread = InstaThread(c, session)
         thread.start()
-        threads.append(thread)
+        THREADS.append(thread)
 
 
 def Exit_gracefully(signal, frame):
-    for t in threads:
-        t.join(1)
+    for t in THREADS:
+        t.join(5)
     exit(0)
 
 
