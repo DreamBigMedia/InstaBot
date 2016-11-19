@@ -1,15 +1,12 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-import json
 
-import requests
-from instagram_api.InstagramAPI import InstagramAPI
+import time, random, re, os, shutil, datetime, threading, requests, json, signal
 
 import instaloader
-import time, random, re, os, shutil, datetime
+from instagram_api.InstagramAPI import InstagramAPI
 
 
-def my_download(name, session, profile_pic_only=False, download_videos=True, geotags=False,
+def my_download(name, session, instagram, profile_pic_only=False, download_videos=True, geotags=False,
         fast_update=False, shorter_output=False, sleep=True, quiet=False, filter_func=None, sleep_min=10, my_profile=None):
     """Download one profile"""
     # pylint:disable=too-many-branches,too-many-locals
@@ -22,8 +19,8 @@ def my_download(name, session, profile_pic_only=False, download_videos=True, geo
         name = name_updated
         data = instaloader.get_json(name, session, sleep=sleep)
     # Download profile picture
-        instaloader.download_profilepic(name, data["entry_data"]["ProfilePage"][0]["user"]["profile_pic_url"],
-            quiet=quiet)
+    #     instaloader.download_profilepic(name, data["entry_data"]["ProfilePage"][0]["user"]["profile_pic_url"],
+    #         quiet=quiet)
     if sleep:
         time.sleep(1.75 * random.random() + 0.25)
     if profile_pic_only:
@@ -50,20 +47,26 @@ def my_download(name, session, profile_pic_only=False, download_videos=True, geo
             data = data["entry_data"]["ProfilePage"][0]["user"]["media"]["nodes"]
             return int(data[len(data) - 1]["id"])
     totalcount = data["entry_data"]["ProfilePage"][0]["user"]["media"]["count"]
-    count = 1
+    count = 0
     while get_last_id(data) is not None:
         for node in data["entry_data"]["ProfilePage"][0]["user"]["media"]["nodes"]:
-            instaloader._log("[%3i/%3i] " % (count, totalcount), end="", flush=True, quiet=quiet)
             count += 1
+            threadLock.acquire()
+            instaloader._log("%25s :: %-25s [%4i/%4i] " % (instagram.username, name, count, totalcount), end="", flush=True, quiet=quiet)
             if filter_func is not None and filter_func(node):
+                instaloader._log('Has not enough likes.\n', end='', flush=True, quiet=quiet)
+                threadLock.release()
                 continue
 
             path = name if my_profile == None else my_profile + '/' + name
-            downloaded = instaloader.download_node(node, session, path,
+            downloaded = instaloader.download_node(node, session, path, instagram,
                                        download_videos=download_videos, geotags=geotags,
-                                       sleep=sleep, shorter_output=shorter_output, quiet=quiet, sleep_min=sleep_min)
+                                       sleep=sleep, shorter_output=shorter_output, quiet=quiet)
+            threadLock.release()
             if fast_update and not downloaded:
                 return
+            if sleep:
+                time.sleep(sleep_min * 60)
         data = instaloader.get_json(name, session, max_id=get_last_id(data), sleep=sleep)
 
 
@@ -104,7 +107,7 @@ def my_check_id(profile, session, json_data, quiet=False, my_profile=''):
     raise instaloader.ProfileNotExistsException("Profile {0} does not exist.".format(profile))
 
 
-def my_download_node(node, session, name, download_videos=True, geotags=False, sleep=True, shorter_output=False, quiet=False, sleep_min=10):
+def my_download_node(node, session, name, instagram, download_videos=True, geotags=False, sleep=True, shorter_output=False, quiet=False):
     """
     Download everything associated with one instagram node, i.e. picture, caption and video.
 
@@ -130,20 +133,19 @@ def my_download_node(node, session, name, download_videos=True, geotags=False, s
             video = instaloader.download_pic(name,
                          video_data['entry_data']['PostPage'][0]['media']['video_url'],
                          node["date"], 'mp4', quiet=quiet)
-            InstagramAPI.uploadVideo(video=video, thumbnail=filename, caption=node["caption"])
+            instagram.uploadVideo(video=video, thumbnail=filename, caption=node["caption"])
         else:
-            InstagramAPI.uploadPhoto(photo=filename, caption=node["caption"])
+            instagram.uploadPhoto(photo=filename, caption=node["caption"])
 
         if geotags:
             location = instaloader.get_location(node, session, sleep)
             if location:
                 instaloader.save_location(name, location, node["date"])
         instaloader._log(quiet=quiet)
-
-        if sleep:
-            time.sleep(sleep_min * 60)
+    except PicAlreadyDownloadedException:
+        return False
     except instaloader.InstaloaderException as ex:
-        print(ex)
+        print('\n' + ex)
         return False
 
     return True
@@ -158,7 +160,7 @@ def my_download_pic(name, url, date_epoch, outputlabel=None, quiet=False):
     file_extension = url[-3:] if urlmatch is None else urlmatch.group(0)[1:-1]
     filename = name.lower() + '/' + instaloader._epoch_to_string(date_epoch) + '.' + file_extension
     if os.path.isfile(filename):
-        instaloader._log(outputlabel + ' exists', end=' ', flush=True, quiet=quiet)
+        instaloader._log(outputlabel + ' exists.\n', end='', flush=True, quiet=quiet)
         raise PicAlreadyDownloadedException("File \'" + filename + "\' already exists.")
     resp = instaloader.get_anonymous_session().get(url, stream=True)
     if resp.status_code == 200:
@@ -171,12 +173,6 @@ def my_download_pic(name, url, date_epoch, outputlabel=None, quiet=False):
         return filename
     else:
         raise instaloader.ConnectionException("File \'" + url + "\' could not be downloaded.")
-
-
-instaloader.download = my_download
-instaloader.check_id = my_check_id
-instaloader.download_node = my_download_node
-instaloader.download_pic = my_download_pic
 
 
 class PicAlreadyDownloadedException(instaloader.NonfatalException):
@@ -213,13 +209,53 @@ class MyInstagramAPI(InstagramAPI):
                     print ("Login success!\n")
                     return True
 
-with open('config.json', 'r') as f:
-    config = json.load(f)
-profile=0
 
-InstagramAPI = MyInstagramAPI(config[profile]['username'], config[profile]['password'])
-InstagramAPI.login(proxies=config[profile]['proxies'])  # login
-session = instaloader.get_anonymous_session()
-for c in config[profile]['channels']:
-    instaloader.download(name=c['name'], my_profile=config[profile]['username'], sleep_min=config[profile]['sleep'], session=session, fast_update=False, filter_func=lambda node: node["likes"]["count"] < c['min_likes'])
-InstagramAPI.logout()
+class InstaThread (threading.Thread):
+    def __init__(self, config, session):
+        threading.Thread.__init__(self)
+        self.username = config['username']
+        self.password = config['password']
+        self.proxies = config['proxies']
+        self.channels = config['channels']
+        self.sleep_min = config['sleep']
+        self.session = session
+        self.instagram = MyInstagramAPI(self.username, self.password)
+        self.instagram.login(proxies=self.proxies)
+
+    def run(self):
+        print("Starting " + self.username)
+        for channel in self.channels:
+            instaloader.download(name=channel['name'], instagram=self.instagram, my_profile=self.username, sleep_min=self.sleep_min, session=self.session, fast_update=False, filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
+        self.instagram.logout()
+        print("Stopping " + self.username)
+
+
+instaloader.download = my_download
+instaloader.check_id = my_check_id
+instaloader.download_node = my_download_node
+instaloader.download_pic = my_download_pic
+threadLock = threading.Lock()
+threads = []
+
+def main():
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+    session = instaloader.get_anonymous_session()
+
+    for c in config:
+        if not c['active']:
+            continue
+        thread = InstaThread(c, session)
+        thread.start()
+        threads.append(thread)
+
+
+def Exit_gracefully(signal, frame):
+    for t in threads:
+        t.join(1)
+    exit(0)
+
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGINT, Exit_gracefully)
+    main()
