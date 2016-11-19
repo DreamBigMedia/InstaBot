@@ -1,0 +1,49 @@
+[
+  {
+    "active": true,
+    "username": "username",
+    "password": "password",
+    "proxies": {},
+    "sleep": 60,
+    "timezone": "US/Central",
+    "start_hour": 9,
+    "end_hour": 0,
+    "channels": [{
+      "name": "instagram_profile",
+      "min_likes": 35000
+    },{
+      "name": "instagram_profile2",
+      "min_likes": 10000
+    }],
+    "captions":[
+      "\n—follow @XXX",
+      "\n@XXX"
+    ],
+    "tags": [
+      "#sample"
+    ]
+  },{
+    "active": false,
+    "username": "username",
+    "password": "password",
+    "proxies": {"https": "http://218.158.67.237:3128"},
+    "sleep": 60,
+    "timezone": "US/Central",
+    "start_hour": 9,
+    "end_hour": 0,
+    "channels": [{
+      "name": "instagram_profile",
+      "min_likes": 35000
+    },{
+      "name": "instagram_profile2",
+      "min_likes": 10000
+    }],
+    "captions":[
+      "\n—follow @XXX",
+      "\n@XXX"
+    ],
+    "tags": [
+      "#sample"
+    ]
+  }
+]
