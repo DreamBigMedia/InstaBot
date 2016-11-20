@@ -5,6 +5,11 @@ import instaloader
 from instagram_api.InstagramAPI import InstagramAPI
 
 
+def get_sleep_time(sleep_min, range=0.33):
+    variance = sleep_min * range
+    return random.uniform(sleep_min - variance, sleep_min + variance)
+
+
 def in_between(now, start, end):
     if start <= end:
         return start <= now < end
@@ -253,7 +258,7 @@ class InstaThread (threading.Thread):
             instaloader.download(name=channel['name'], config=self.config, instagram=self.instagram, my_profile=self.username,
                                  sleep_min=self.sleep_min, session=self.session, fast_update=False,
                                  filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
-            time.sleep(self.sleep_min * 60)
+            get_sleep_time(self.sleep_min)
 
 
 instaloader.download = my_download
