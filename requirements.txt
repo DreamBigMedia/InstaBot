@@ -1,8 +1,8 @@
 decorator==4.0.10
 httplib2==0.9.2
 imageio==1.6
--e git+https://tjetzinger@github.com/tjetzinger/instabot.py.git@33c53cdf5da6a9abcb92b44a346f649e0d8a358f#egg=instabot
--e git+https://tjetzinger@github.com/tjetzinger/Instagram-API-python.git@d4d8fc18ce30983ad165d676c734b78de474ecdc#egg=instagram_api
+-e git+https://tjetzinger@github.com/tjetzinger/instabot.py.git@07c2843de7333b736d8930362e7e3627fd145db9#egg=instabot
+-e git+https://tjetzinger@github.com/tjetzinger/Instagram-API-python.git@25734f81fb7c478158a0ccb9d706d464e51bade3#egg=instagram_api
 instaloader==1.2
 moviepy==0.2.2.11
 numpy==1.11.2
