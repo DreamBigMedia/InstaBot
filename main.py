@@ -11,6 +11,8 @@ def get_sleep_time(sleep_min, range=0.33):
 
 
 def in_between(now, start, end):
+    if start == end:
+        return True
     if start <= end:
         return start <= now < end
     else:
@@ -74,7 +76,7 @@ def my_download(name, session, config, instagram, profile_pic_only=False, downlo
     while get_last_id(data) is not None:
         for node in data["entry_data"]["ProfilePage"][0]["user"]["media"]["nodes"]:
             count += 1
-            instaloader._log("%s %25s :: %-25s [%4i/%4i] " % (datetime.datetime.now(), instagram.username, name, count,
+            instaloader._log("%s %25s :: %-25s [%4i/%4i] " % (datetime.datetime.now(tz=pytz.timezone(config['timezone'])), instagram.username, name, count,
                                                               totalcount), end="", flush=False, quiet=quiet)
             if filter_func is not None and filter_func(node):
                 instaloader._log('Has not enough likes.', flush=True, quiet=quiet)
@@ -258,7 +260,8 @@ class InstaThread (threading.Thread):
             instaloader.download(name=channel['name'], config=self.config, instagram=self.instagram, my_profile=self.username,
                                  sleep_min=self.sleep_min, session=self.session, fast_update=False,
                                  filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
-            get_sleep_time(self.sleep_min)
+            sleep_time = get_sleep_time(self.sleep_min * 60)
+            time.sleep(sleep_time)
 
 
 instaloader.download = my_download
