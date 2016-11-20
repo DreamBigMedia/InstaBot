@@ -275,7 +275,12 @@ INSTAUSER_REGEX = re.compile(r"@[\w.]+")
 
 
 def main(argv):
-    config_file = argv[0] if os.path.exists(argv[0]) else 'config_sample.json'
+    try:
+        config_file = argv[0]
+        if not os.path.exists(config_file):
+            raise Exception("File " + config_file + " doesn't exist.")
+    except:
+        config_file = 'config_sample.json'
     with open(config_file, 'r') as f:
         config = json.load(f)
     session = instaloader.get_anonymous_session()
