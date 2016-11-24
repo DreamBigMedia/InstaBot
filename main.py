@@ -256,12 +256,12 @@ class InstaThread (threading.Thread):
             while not in_between(datetime.datetime.now(tz=pytz.timezone(self.timezone)).time(),
                                  datetime.time(self.start_hour), datetime.time(self.end_hour)):
                 time.sleep(30)
+            sleep_time = get_sleep_time(self.sleep_min * 60)
+            time.sleep(sleep_time)
             channel = random.choice(self.channels)
             instaloader.download(name=channel['name'], config=self.config, instagram=self.instagram, my_profile=self.username,
                                  sleep_min=self.sleep_min, session=self.session, fast_update=False,
                                  filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
-            sleep_time = get_sleep_time(self.sleep_min * 60)
-            time.sleep(sleep_time)
 
 
 instaloader.download = my_download
