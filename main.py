@@ -249,15 +249,19 @@ class InstaThread (threading.Thread):
         self.end_hour = config['end_hour']
         self.session = session
         self.instagram = MyInstagramAPI(self.username, self.password)
-        self.instagram.login(proxies=self.proxies)
+        self.login = True
 
     def run(self):
         while True:
             while not in_between(datetime.datetime.now(tz=pytz.timezone(self.timezone)).time(),
                                  datetime.time(self.start_hour), datetime.time(self.end_hour)):
+                self.login = True
                 time.sleep(30)
             sleep_time = get_sleep_time(self.sleep_min * 60)
             time.sleep(sleep_time)
+            if self.login:
+                self.instagram.login(proxies=self.proxies)
+                self.login = False
             channel = random.choice(self.channels)
             instaloader.download(name=channel['name'], config=self.config, instagram=self.instagram, my_profile=self.username,
                                  sleep_min=self.sleep_min, session=self.session, fast_update=False,
