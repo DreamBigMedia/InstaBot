@@ -255,14 +255,15 @@ class InstaThread (threading.Thread):
         while True:
             while not in_between(datetime.datetime.now(tz=pytz.timezone(self.timezone)).time(),
                                  datetime.time(self.start_hour), datetime.time(self.end_hour)):
-                time.sleep(30)
-            sleep_time = get_sleep_time(self.sleep_min * 60)
-            time.sleep(sleep_time)
+                sleep_time = get_sleep_time(5 * 60)
+                time.sleep(sleep_time)
             channel = random.choice(self.channels)
             try:
                 instaloader.download(name=channel['name'], config=self.config, instagram=self.instagram, my_profile=self.username,
                                  sleep_min=self.sleep_min, session=self.session, fast_update=False,
                                  filter_func=lambda node: node["likes"]["count"] < channel['min_likes'])
+                sleep_time = get_sleep_time(self.sleep_min * 60)
+                time.sleep(sleep_time)
             except:
                 self.instagram.login(proxies=self.proxies)
 
