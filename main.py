@@ -151,6 +151,7 @@ def my_download_node(node, session, name, config, instagram, download_videos=Tru
         caption = node["caption"] if "caption" in node else ""
         if len(INSTAUSER_REGEX.findall(caption)) == 0:
             caption = caption + get_random_caption(name.split('/'), config)
+        # caption = ""
         caption = caption + get_tags(config)
         instaloader.save_caption(name, node["date"], caption, shorter_output, quiet=True)
 
@@ -249,7 +250,7 @@ class InstaThread (threading.Thread):
         self.end_hour = config['end_hour']
         self.session = session
         self.instagram = MyInstagramAPI(self.username, self.password)
-        self.instagram.login(proxies=self.proxies)
+        self.login = False
 
     def run(self):
         while True:
@@ -257,6 +258,9 @@ class InstaThread (threading.Thread):
                                  datetime.time(self.start_hour), datetime.time(self.end_hour)):
                 sleep_time = get_sleep_time(5 * 60)
                 time.sleep(sleep_time)
+            if not self.login:
+                self.instagram.login(proxies=self.proxies)
+                self.login = True
             channel = random.choice(self.channels)
             try:
                 instaloader.download(name=channel['name'], config=self.config, instagram=self.instagram, my_profile=self.username,
